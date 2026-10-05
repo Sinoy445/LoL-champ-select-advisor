@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "description": "User's champion pool per role. Only champions in this list will be recommended for that role.",
+  "pools": {
+    "JUNGLE": ["Sylas", "Wukong", "Shen", "Viego", "MasterYi","Aatrox"],
+    "SUPPORT": ["Braum", "Thresh", "Blitzcrank", "Rakan"],
+    "TOP": ["Aatrox", "fiora", "camille" , "shen" , "wukong"],
+    "MID": ["sylas", "kaisa"],
+    "ADC": ["kaisa", "ashe", "ezreal", "jhin", "lucian"]
+  }
+}
