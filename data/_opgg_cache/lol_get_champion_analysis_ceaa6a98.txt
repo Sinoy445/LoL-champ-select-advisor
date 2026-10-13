@@ -1,0 +1,7 @@
+class LolGetChampionAnalysis: position,data
+class Data: strong_counters,weak_counters,synergies
+class StrongCounter: champion_id,champion_name,play,win,my_win_rate,counter_win_rate,win_rate
+class Synergies: jungle,mid,adc,support
+class Jungle: champion_id,champion_name,position,synergy_champion_id,synergy_champion_name,synergy_position,score_rank,score,play,win,win_rate
+
+LolGetChampionAnalysis("TOP",Data([StrongCounter(897,"K'Sante",976,564,0.58,0.42,0.58),StrongCounter(83,"Yorick",493,271,0.55,0.45,0.55),StrongCounter(266,"Aatrox",1589,857,0.54,0.46,0.54)],[StrongCounter(34,"Anivia",117,48,0.41,0.59,0.59),StrongCounter(19,"Warwick",417,176,0.42,0.58,0.58),StrongCounter(127,"Lissandra",106,44,0.42,0.58,0.58)],Synergies([Jungle(114,"Fiora","TOP",62,"Wukong","JUNGLE",6,0,399,213,0.53),Jungle(114,"Fiora","TOP",76,"Nidalee","JUNGLE",5,0,418,221,0.53),Jungle(114,"Fiora","TOP",517,"Sylas","JUNGLE",2,0,573,302,0.53)],[Jungle(114,"Fiora","TOP",7,"LeBlanc","MID",9,0,377,208,0.55),Jungle(114,"Fiora","TOP",103,"Ahri","MID",7,0,475,255,0.54),Jungle(114,"Fiora","TOP",3,"Galio","MID",10,0,354,187,0.53)],[Jungle(114,"Fiora","TOP",18,"Tristana","ADC",8,0,637,343,0.54),Jungle(114,"Fiora","TOP",202,"Jhin","ADC",2,0,1251,646,0.52),Jungle(114,"Fiora","TOP",236,"Lucian","ADC",9,0,603,310,0.51)],[Jungle(114,"Fiora","TOP",53,"Blitzcrank","SUPPORT",4,0,590,324,0.55),Jungle(114,"Fiora","TOP",432,"Bard","SUPPORT",7,0,400,214,0.54),Jungle(114,"Fiora","TOP",89,"Leona","SUPPORT",6,0,411,219,0.53)])))

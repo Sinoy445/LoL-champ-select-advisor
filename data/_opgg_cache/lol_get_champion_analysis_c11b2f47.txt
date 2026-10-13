@@ -1,0 +1,7 @@
+class LolGetChampionAnalysis: position,data
+class Data: summary
+class Summary: positions
+class Position: counters
+class Counter: champion_id,champion_name,play,win
+
+LolGetChampionAnalysis("TOP",Data(Summary([Position([Counter(34,"Anivia",137,58),Counter(67,"Vayne",149,65),Counter(420,"Illaoi",420,185)]),Position([Counter(9,"Fiddlesticks",38,13),Counter(17,"Teemo",30,11),Counter(22,"Ashe",50,19)])])))

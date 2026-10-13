@@ -1,0 +1,7 @@
+class LolGetChampionAnalysis: position,data
+class Data: strong_counters,weak_counters,synergies
+class StrongCounter: champion_id,champion_name,play,win,my_win_rate,counter_win_rate,win_rate
+class Synergies: jungle,mid,adc,support
+class Jungle: champion_id,champion_name,position,synergy_champion_id,synergy_champion_name,synergy_position,score_rank,score,play,win,win_rate
+
+LolGetChampionAnalysis("TOP",Data([StrongCounter(126,"Jayce",299,177,0.59,0.41,0.59),StrongCounter(80,"Pantheon",129,73,0.57,0.43,0.57),StrongCounter(39,"Irelia",188,105,0.56,0.44,0.56)],[StrongCounter(82,"Mordekaiser",202,73,0.36,0.64,0.64),StrongCounter(31,"Cho'Gath",131,58,0.44,0.56,0.56),StrongCounter(24,"Jax",253,115,0.45,0.55,0.55)],Synergies([Jungle(62,"Wukong","TOP",876,"Lillia","JUNGLE",8,0,72,43,0.6),Jungle(62,"Wukong","TOP",246,"Qiyana","JUNGLE",3,0,109,63,0.58),Jungle(62,"Wukong","TOP",59,"Jarvan IV","JUNGLE",10,0,71,40,0.56)],[Jungle(62,"Wukong","TOP",84,"Akali","MID",7,0,88,50,0.57),Jungle(62,"Wukong","TOP",4,"Twisted Fate","MID",2,0,117,65,0.56),Jungle(62,"Wukong","TOP",103,"Ahri","MID",3,0,102,55,0.54)],[Jungle(62,"Wukong","TOP",523,"Aphelios","ADC",4,0,155,88,0.57),Jungle(62,"Wukong","TOP",804,"Yunara","ADC",7,0,134,75,0.56),Jungle(62,"Wukong","TOP",236,"Lucian","ADC",8,0,115,63,0.55)],[Jungle(62,"Wukong","TOP",12,"Alistar","SUPPORT",10,0,68,40,0.59),Jungle(62,"Wukong","TOP",43,"Karma","SUPPORT",8,0,83,48,0.58),Jungle(62,"Wukong","TOP",412,"Thresh","SUPPORT",2,0,170,97,0.57)])))

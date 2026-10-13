@@ -1,0 +1,7 @@
+class LolGetChampionAnalysis: position,data
+class Data: strong_counters,weak_counters,synergies
+class StrongCounter: champion_id,champion_name,play,win,my_win_rate,counter_win_rate,win_rate
+class Synergies: jungle,mid,adc,support
+class Jungle: champion_id,champion_name,position,synergy_champion_id,synergy_champion_name,synergy_position,score_rank,score,play,win,win_rate
+
+LolGetChampionAnalysis("TOP",Data([StrongCounter(110,"Varus",161,101,0.63,0.37,0.63),StrongCounter(8,"Vladimir",222,131,0.59,0.41,0.59),StrongCounter(223,"Tahm Kench",442,242,0.55,0.45,0.55)],[StrongCounter(27,"Singed",561,241,0.43,0.57,0.57),StrongCounter(127,"Lissandra",106,48,0.45,0.55,0.55),StrongCounter(54,"Malphite",1620,750,0.46,0.54,0.54)],Synergies([Jungle(266,"Aatrox","TOP",91,"Talon","JUNGLE",10,0,420,222,0.53),Jungle(266,"Aatrox","TOP",76,"Nidalee","JUNGLE",5,0,506,264,0.52),Jungle(266,"Aatrox","TOP",104,"Graves","JUNGLE",4,0,600,311,0.52)],[Jungle(266,"Aatrox","TOP",4,"Twisted Fate","MID",3,0,744,394,0.53),Jungle(266,"Aatrox","TOP",103,"Ahri","MID",4,0,626,320,0.51),Jungle(266,"Aatrox","TOP",112,"Viktor","MID",1,0,922,469,0.51)],[Jungle(266,"Aatrox","TOP",145,"Kai'Sa","ADC",1,0,1722,890,0.52),Jungle(266,"Aatrox","TOP",202,"Jhin","ADC",2,0,1553,789,0.51),Jungle(266,"Aatrox","TOP",222,"Jinx","ADC",4,0,1070,538,0.5)],[Jungle(266,"Aatrox","TOP",53,"Blitzcrank","SUPPORT",4,0,787,424,0.54),Jungle(266,"Aatrox","TOP",89,"Leona","SUPPORT",7,0,545,291,0.53),Jungle(266,"Aatrox","TOP",111,"Nautilus","SUPPORT",3,0,942,500,0.53)])))

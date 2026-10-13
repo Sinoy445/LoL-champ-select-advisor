@@ -1,0 +1,7 @@
+class LolGetChampionAnalysis: position,data
+class Data: strong_counters,weak_counters,synergies
+class StrongCounter: champion_id,champion_name,play,win,my_win_rate,counter_win_rate,win_rate
+class Synergies: jungle,mid,adc,support
+class Jungle: champion_id,champion_name,position,synergy_champion_id,synergy_champion_name,synergy_position,score_rank,score,play,win,win_rate
+
+LolGetChampionAnalysis("TOP",Data([StrongCounter(517,"Sylas",136,81,0.6,0.4,0.6),StrongCounter(133,"Quinn",124,75,0.6,0.4,0.6),StrongCounter(126,"Jayce",1084,600,0.55,0.45,0.55)],[StrongCounter(34,"Anivia",137,58,0.42,0.58,0.58),StrongCounter(420,"Illaoi",420,185,0.44,0.56,0.56),StrongCounter(67,"Vayne",149,65,0.44,0.56,0.56)],Synergies([Jungle(164,"Camille","TOP",76,"Nidalee","JUNGLE",4,0,346,191,0.55),Jungle(164,"Camille","TOP",104,"Graves","JUNGLE",5,0,337,182,0.54),Jungle(164,"Camille","TOP",64,"Lee Sin","JUNGLE",1,0,1042,546,0.52)],[Jungle(164,"Camille","TOP",134,"Syndra","MID",9,0,310,172,0.55),Jungle(164,"Camille","TOP",4,"Twisted Fate","MID",3,0,429,235,0.55),Jungle(164,"Camille","TOP",7,"LeBlanc","MID",10,0,278,150,0.54)],[Jungle(164,"Camille","TOP",523,"Aphelios","ADC",4,0,597,318,0.53),Jungle(164,"Camille","TOP",202,"Jhin","ADC",2,0,964,503,0.52),Jungle(164,"Camille","TOP",222,"Jinx","ADC",5,0,587,305,0.52)],[Jungle(164,"Camille","TOP",12,"Alistar","SUPPORT",8,0,291,162,0.56),Jungle(164,"Camille","TOP",111,"Nautilus","SUPPORT",3,0,583,314,0.54),Jungle(164,"Camille","TOP",350,"Yuumi","SUPPORT",7,0,314,165,0.53)])))
