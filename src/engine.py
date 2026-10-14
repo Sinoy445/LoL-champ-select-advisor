@@ -53,6 +53,14 @@ COUNTER_REST_WEIGHT = 0.25   # each further counter on the enemy team counts at 
 MATCHUP_AS_COUNTER = 0.6     # lane-matchup data reused for non-lane enemies (cross-role proxy)
 MIN_COUNTER_SIGNAL = 1.5     # ignore bonuses smaller than this many points
 
+# Ranking: a pick with no real evidence (only the meta tie-breaker) ranks below picks that have
+# evidence, unless that evidence is clearly negative (score under NO_DATA_FLOOR).
+NO_DATA_FLOOR = 49.0
+
+# AD/AP warning severity = share of the team's damage already on the same type
+DAMAGE_WARN_AMBER = 0.70   # below: grey note, from here: amber "!"
+DAMAGE_WARN_RED = 0.85     # from here: red "x"
+
 # ------------------------------------------------------------------- helpers
 _ROLE_ALIASES = {
     "TOP": "TOP",
@@ -128,6 +136,9 @@ class PickRecommendation:
     has_matchup_data: bool = False
     is_current: bool = False  # this is the champ you are currently hovering
     main_counter: str = ""    # most threatening enemy champion for this pick
+    has_data: bool = False    # any evidence beyond the meta tie-breaker (False -> UI shows "no data")
+    lane_missing: bool = False  # lane opponent known, but no matchup data for this pick
+    details: Dict[str, str] = field(default_factory=dict)  # lane/synergy/counter/comp -> one-line read
 
 
 # -------------------------------------------------------------------- engine
@@ -304,7 +315,12 @@ class ScoringEngine:
         if f >= 0.25:
             return f, f"✓ Adds {'AP' if pick_ap > 0.5 else 'AD'} (team is {pct}% {dominant})"
         if f <= -0.25:
-            return f, f"✗ Stacks {dominant} (team already {pct}% {dominant})"
+            share = max(team_ap, 1 - team_ap)
+            if share >= DAMAGE_WARN_RED:
+                return f, f"✗ Stacks {dominant} (team {pct}% {dominant})"
+            if share >= DAMAGE_WARN_AMBER:
+                return f, f"! Stacks {dominant} (team {pct}% {dominant})"
+            return f, f"· Leans {dominant} (team {pct}% {dominant})"
         return f, ""
 
     def _frontline_factor(self, pick: int, allies: List[int], role: str) -> Tuple[float, str]:
@@ -333,7 +349,10 @@ class ScoringEngine:
     ) -> PickRecommendation:
         w = self._w
         contribs: List[Tuple[float, str]] = []  # (impact on score, reason)
+        details: Dict[str, str] = {}
         total = 0.0
+        evidence = False       # becomes True once any non-meta factor has something real to say
+        lane_missing = False
 
         # 1. Lane matchup
         matchup_score, has_matchup = 50.0, False
@@ -341,27 +360,40 @@ class ScoringEngine:
             opp = self.get_champion_name(enemy_lane_opponent)
             wr = self._matchup_winrate(pick_id, enemy_lane_opponent)
             if wr is None:
-                contribs.append((0.0, f"· No matchup data vs {opp}"))
+                lane_missing = True
+                details["lane"] = f"· No matchup data vs {opp}"
             else:
-                matchup_score, has_matchup = wr, True
+                matchup_score, has_matchup, evidence = wr, True, True
                 impact = w["lane"] * _clip((wr - 50.0) / CAPS["lane"])
                 total += impact
                 if wr >= 52:
-                    contribs.append((impact, f"✓ Counters {opp} ({wr:.1f}%)"))
+                    text = f"✓ Counters {opp} ({wr:.1f}%)"
                 elif wr <= 48:
-                    contribs.append((impact, f"✗ Weak into {opp} ({wr:.1f}%)"))
+                    text = f"✗ Weak into {opp} ({wr:.1f}%)"
+                else:
+                    text = ""
+                if text:
+                    contribs.append((impact, text))
+                    details["lane"] = text
+                else:
+                    details["lane"] = f"· Even vs {opp} ({wr:.1f}%)"
 
         # 2. Synergy with allies
         syn_sum = 0.0
+        syn_texts: List[Tuple[float, str]] = []
         for ally in _unique(allied_picks):
             bonus = self._synergy_bonus(pick_id, ally)
             if bonus:
+                evidence = True
                 syn_sum += bonus
                 sign = "+" if bonus > 0 else ""
                 mark = "✓" if bonus > 0 else "✗"
-                contribs.append((w["synergy"] * bonus / CAPS["synergy"],
-                                 f"{mark} Synergy w/ {self.get_champion_name(ally)} ({sign}{bonus:.1f})"))
+                impact = w["synergy"] * bonus / CAPS["synergy"]
+                text = f"{mark} Synergy w/ {self.get_champion_name(ally)} ({sign}{bonus:.1f})"
+                contribs.append((impact, text))
+                syn_texts.append((abs(impact), text))
         total += w["synergy"] * _clip(syn_sum / CAPS["synergy"])
+        details["synergy"] = max(syn_texts)[1] if syn_texts else "· No synergy data"
 
         # 3. Individual counters among the rest of the enemy team (lane opponent is factor 1).
         #    The most threatening enemy counts fully; further counters count at a fraction.
@@ -375,6 +407,7 @@ class ScoringEngine:
         neg = sorted(t for t in threats if t[0] < 0)
         pos = sorted((t for t in threats if t[0] > 0), reverse=True)
         ctr_sum, main_counter = 0.0, ""
+        ctr_texts: List[str] = []
         for group in (neg, pos):
             if not group:
                 continue
@@ -387,10 +420,15 @@ class ScoringEngine:
             else:
                 text = f"✓ Counters {cname} (+{main_b:.1f})"
             contribs.append((w["counter"] * main_b / CAPS["counter"], text))
+            ctr_texts.append(text)
+        if threats:
+            evidence = True
+            details["counter"] = ctr_texts[0]   # negatives come first
         total += w["counter"] * _clip(ctr_sum / CAPS["counter"])
 
         # 4. Comp: AD/AP balance and frontline (only champions with trait data)
         known_allies = [a for a in _unique(allied_picks) if a in self.traits]
+        comp_texts: List[Tuple[float, str]] = []
         for key, (factor, text) in (
             ("damage", self._damage_factor(pick_id, known_allies)),
             ("frontline", self._frontline_factor(pick_id, known_allies, my_role)),
@@ -398,9 +436,12 @@ class ScoringEngine:
             impact = w[key] * factor
             total += impact
             if text:
+                evidence = True
                 contribs.append((impact, text))
+                comp_texts.append((abs(impact), text))
+        details["comp"] = max(comp_texts)[1] if comp_texts else "· Comp neutral"
 
-        # 5. Meta win rate (tie-breaker)
+        # 5. Meta win rate (tie-breaker; does not count as evidence)
         meta = self.winrates.get(my_role, {}).get(pick_id)
         if meta is not None:
             impact = w["meta"] * _clip((meta - 50.0) / CAPS["meta"])
@@ -421,7 +462,17 @@ class ScoringEngine:
             reasons=[text for _, text in contribs[:3]],
             has_matchup_data=has_matchup,
             main_counter=main_counter,
+            has_data=evidence,
+            lane_missing=lane_missing,
+            details=details,
         )
+
+    @staticmethod
+    def _rank_tier(rec: PickRecommendation) -> int:
+        """2 = evidence and not clearly bad, 1 = no data, 0 = evidence says it is bad."""
+        if not rec.has_data:
+            return 1
+        return 2 if rec.score >= NO_DATA_FLOOR else 0
 
     def get_recommendations(
         self,
@@ -455,7 +506,7 @@ class ScoringEngine:
                   for c in candidates]
         for rec in scored:
             rec.is_current = bool(my_pick_intent) and rec.champion_id == my_pick_intent
-        scored.sort(key=lambda r: r.score, reverse=True)
+        scored.sort(key=lambda r: (self._rank_tier(r), r.score), reverse=True)
         return scored[:top_n]
 
 

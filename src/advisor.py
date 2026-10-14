@@ -10,6 +10,8 @@ from engine import ScoringEngine, canonical_role
 from lcu import LCUClient, LCUConnectionError
 
 CONNECT_RETRY_SECONDS = 5.0
+SWAP_MARGIN = 2.0   # only mention a swap candidate if it beats the locked pick by this many points
+CANDIDATES_SCANNED = 10
 
 
 @dataclass
@@ -23,10 +25,24 @@ class ChampSelectState:
     banned: List[int] = field(default_factory=list)
     my_hover: int = 0
     phase: str = ""
+    locked_champion: int = 0       # your locked-in champion id, 0 while you are still choosing
 
 
 def _champ_id(player: dict) -> int:
     return int(player.get("championId") or 0)
+
+
+def _locked_pick(session: dict, me: dict, my_cell, phase: str) -> int:
+    """Champion id you have locked in, else 0. A completed pick action for your cell is the
+    reliable signal; in FINALIZATION the team entry holds the locked champion as a fallback."""
+    for group in session.get("actions") or []:
+        for act in group or []:
+            if (act.get("actorCellId") == my_cell and act.get("type") == "pick"
+                    and act.get("completed") and int(act.get("championId") or 0) > 0):
+                return int(act["championId"])
+    if phase == "FINALIZATION":
+        return _champ_id(me)
+    return 0
 
 
 def infer_lane_opponent(
@@ -68,6 +84,7 @@ def parse_session(
     their_team = session.get("theirTeam") or []
     lane, cands = infer_lane_opponent(role, their_team, champ_roles)
 
+    phase = (session.get("timer") or {}).get("phase", "")
     bans = session.get("bans") or {}
     banned = [int(b) for b in (*bans.get("myTeamBans", []), *bans.get("theirTeamBans", [])) if b and int(b) > 0]
 
@@ -81,7 +98,8 @@ def parse_session(
                       if _champ_id(p) > 0 and p.get("cellId") != my_cell],
         banned=banned,
         my_hover=_champ_id(me) or int(me.get("championPickIntent") or 0),
-        phase=(session.get("timer") or {}).get("phase", ""),
+        phase=phase,
+        locked_champion=_locked_pick(session, me, my_cell, phase),
     )
 
 
@@ -156,15 +174,51 @@ class Advisor:
             allied_picks=state.allied_picks,
             banned=state.banned,
             my_pick_intent=state.my_hover,
-            top_n=self.top_n,
+            top_n=max(self.top_n, CANDIDATES_SCANNED),
             available=self.owned,
         )
+
+        if state.locked_champion:
+            payload["locked"] = self._locked_payload(state, recs)
+            if not eng.has_pool(state.role):
+                payload["note"] = f"No pool set for {state.role}"
+            return payload
+
+        shown = recs[: self.top_n]
         payload["recommendations"] = [
-            {"name": r.champion_name, "score": r.score, "reasons": r.reasons, "current": r.is_current}
-            for r in recs
+            {"name": r.champion_name, "score": r.score, "reasons": r.reasons, "current": r.is_current,
+             "has_data": r.has_data, "lane_missing": r.lane_missing}
+            for r in shown
         ]
+        # Said once for the whole list instead of once per row.
+        if state.lane_opponent and shown and all(r.lane_missing for r in shown):
+            opp = eng.get_champion_name(state.lane_opponent)
+            payload["data_note"] = f"No matchup data vs {opp} - scores use synergy, comp and meta only"
         if not eng.has_pool(state.role):
             payload["note"] = f"No pool set for {state.role} - showing all champions"
         elif not recs:
             payload["note"] = "No pool champions available (banned / picked / not owned)"
         return payload
+
+    def _locked_payload(self, state: ChampSelectState, recs) -> dict:
+        """Read on the champion you already locked, plus an optional swap hint."""
+        eng = self.engine
+        rec = eng.score_pick(state.locked_champion, state.lane_opponent, state.enemy_team,
+                             state.allied_picks, state.role)
+        d = rec.details
+        reads = [d.get("lane", ""), d.get("synergy", ""), d.get("comp", ""), d.get("counter", "")]
+        if not state.lane_opponent:
+            reads[0] = "· Lane opponent not known yet"
+        swap = None
+        alts = [r for r in recs if r.champion_id != state.locked_champion and r.has_data]
+        if alts:
+            best = alts[0]
+            if best.score - rec.score >= SWAP_MARGIN:
+                swap = f"{best.champion_name} ({best.score - rec.score:+.1f})"
+        return {
+            "name": rec.champion_name,
+            "score": rec.score,
+            "has_data": rec.has_data,
+            "reads": [r for r in reads if r],
+            "swap": swap,
+        }
